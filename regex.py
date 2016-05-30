@@ -25,7 +25,7 @@ rgx = {
 
 
 def main():
-    html = requests.get(PARSE_SITE_URL).text.replace('\n', '').replace('\r', '')
+    html = requests.get(SITE_URL).text.replace('\n', '').replace('\r', '')
 
     games = split_page(
         html,
