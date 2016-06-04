@@ -1,4 +1,4 @@
-import re as regex
+import regex
 from datetime import datetime, timedelta
 
 from pymongo import MongoClient
@@ -14,18 +14,39 @@ db = client.d2l_reg
 
 
 rgx = {
-    'games': regex.compile(r'<div class="matchmain">(.*?)</div></div></div>'),
-    'live': regex.compile(r'(LIVE)'),
-    'time': regex.compile(r'<div class="whenm">([0-9]+)\s(\w+)'),
-    'match_id': regex.compile(r'<a href="match\?m=([0-9]+)'),
-    'teams': regex.compile(r'<div class="team"(.*?)</div>    </div>'),
-    'team_name': regex.compile(r'<div class="teamtext"><b>(.*?)</b>'),
-    'won': regex.compile(r'(won.png)'),
+    'games': regex.compile(
+        r'<div class="matchmain">(.*?)</div>\r\n</div>\r\n</div>',
+        regex.MULTILINE | regex.DOTALL
+    ),
+    'live': regex.compile(
+        r'(LIVE)',
+        regex.MULTILINE | regex.DOTALL
+    ),
+    'time': regex.compile(
+        r'<div class="whenm">([0-9]+)\s(\w+)',
+        regex.MULTILINE | regex.DOTALL
+    ),
+    'match_id': regex.compile(
+        r'<a href="match\?m=([0-9]+)',
+        regex.MULTILINE | regex.DOTALL
+    ),
+    'teams': regex.compile(
+        r'<div class="team"(.*?)</i></div>',
+        regex.MULTILINE | regex.DOTALL
+    ),
+    'team_name': regex.compile(
+        r'<div class="teamtext"><b>(.*?)</b>',
+        regex.MULTILINE | regex.DOTALL
+    ),
+    'won': regex.compile(
+        r'(won.png)',
+        regex.MULTILINE | regex.DOTALL
+    ),
 }
 
 
 def main():
-    html = requests.get(SITE_URL).text.replace('\n', '').replace('\r', '')
+    html = requests.get(SITE_URL).text
 
     games = split_page(
         html,
