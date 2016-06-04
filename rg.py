@@ -14,34 +14,19 @@ db = client.d2l_reg
 
 
 rgx = {
-    'games': regex.compile(
-        r'<div class="matchmain">(.*?)</div>\r\n</div>\r\n</div>',
-        regex.MULTILINE | regex.DOTALL
-    ),
-    'live': regex.compile(
-        r'(LIVE)',
-        regex.MULTILINE | regex.DOTALL
-    ),
     'time': regex.compile(
-        r'<div class="whenm">([0-9]+)\s(\w+)',
-        regex.MULTILINE | regex.DOTALL
+        r'<div\sclass="whenm">(\d+?)\s([a-z]+?)\s'
     ),
     'match_id': regex.compile(
-        r'<a href="match\?m=([0-9]+)',
-        regex.MULTILINE | regex.DOTALL
+        r'<a\shref="match\?m=(\d+?)\"'
     ),
     'teams': regex.compile(
-        r'<div class="team"(.*?)</i></div>',
+        r'<div\sclass="team"(.+?)</i></div>',
         regex.MULTILINE | regex.DOTALL
     ),
     'team_name': regex.compile(
-        r'<div class="teamtext"><b>(.*?)</b>',
-        regex.MULTILINE | regex.DOTALL
-    ),
-    'won': regex.compile(
-        r'(won.png)',
-        regex.MULTILINE | regex.DOTALL
-    ),
+        r'<div\sclass="teamtext"><b>(.+?)</b>'
+    )
 }
 
 
@@ -54,12 +39,10 @@ def main():
         '</article>'
     )
 
-    games_list = regex.findall(rgx['games'], games)
+    games_list = games.split('<div class="matchheader">')
 
-    for game in games_list:
-        live = regex.search(rgx['live'], game)
-
-        if not live:
+    for game in games_list[1:]:
+        if 'LIVE' not in game and 'from now' not in game:
             mongo_save(parse_game(game))
 
 
@@ -70,14 +53,22 @@ def split_page(source, start, end):
 def get_time(value, unit):
     value = int(value)
 
-    if 'second' in unit:
-        return(datetime.utcnow() - timedelta(seconds=value))
-    if 'minute' in unit:
-        return(datetime.utcnow() - timedelta(minutes=value))
-    if 'hour' in unit:
-        return(datetime.utcnow() - timedelta(hours=value))
-    if 'day' in unit:
-        return(datetime.utcnow() - timedelta(days=value))
+    params = {}
+
+    for ident, param in (
+        ('second', 'seconds'),
+        ('minute', 'minutes'),
+        ('hour', 'hours'),
+        ('day', 'days')
+    ):
+        if ident in unit:
+            params[param] = value
+            break
+
+    if not params:
+        raise NotImplementedError
+
+    return datetime.utcnow() - timedelta(**params)
 
 
 def parse_game(game):
@@ -88,7 +79,7 @@ def parse_game(game):
 
     parsed_game['time'] = get_time(time_list[0], time_list[1])
 
-    parsed_game['_id'] = regex.findall(rgx['match_id'], game)[0]
+    parsed_game['_id'] = int(regex.findall(rgx['match_id'], game)[0])
 
     team = regex.findall(rgx['teams'], game)
 
@@ -96,14 +87,12 @@ def parse_game(game):
 
     parsed_game['team_2'] = regex.findall(rgx['team_name'], team[1])[0]
 
-    parsed_game['won'] = 0
-
-    if regex.findall(rgx['won'], team[0]):
+    if 'won.png' in team[0]:
         parsed_game['won'] = 1
-    elif regex.findall(rgx['won'], team[1]):
+    elif 'won.png' in team[1]:
         parsed_game['won'] = 2
-
-    print(parsed_game)
+    else:
+        parsed_game['won'] = 0
 
     return parsed_game
 
@@ -113,6 +102,8 @@ def mongo_save(game):
         db.games.insert_one(game)
     except DuplicateKeyError:
         pass
+    else:
+        print(game)
 
 if __name__ == '__main__':
     main()
