@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import regex
 from datetime import datetime, timedelta
 
